@@ -9,3 +9,5 @@ coverage/
 build/
 
 .directory
+
+*.pem
