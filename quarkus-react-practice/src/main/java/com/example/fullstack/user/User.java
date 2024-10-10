@@ -1,6 +1,12 @@
 package com.example.fullstack.user;
 
+import com.example.fullstack.project.Project;
+import com.example.fullstack.task.Task;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import io.quarkus.elytron.security.common.BcryptUtil;
 import io.quarkus.hibernate.reactive.panache.PanacheEntity;
+import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
+import io.smallrye.mutiny.Uni;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -34,4 +40,44 @@ public class User extends PanacheEntity {
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "id"))
     @Column(name = "role")
     public List<String> roles;
+
+    // Setter is needed to deserialize HTTP request when creating a user
+    // with POST since password field of User class is package private.
+    // However, @JsonProperty("password") is not necessarily required here.
+    // "password" property of JSON objects maps to the corresponding field
+    // through the function name.
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public static Uni<User> findByName(String name) {
+        return find("name", name).firstResult();
+    }
+
+    @WithTransaction
+    public static Uni<User> create(User user) {
+        user.password = BcryptUtil.bcryptHash(user.password);
+        return user.persistAndFlush();
+    }
+
+    @WithTransaction
+    public static Uni<User> update(User user) {
+        return User.<User>findById(user.id)
+            .chain(u -> {
+                user.setPassword(u.password);
+                return User.getSession();
+            })
+            .chain(s -> s.merge(user));
+    }
+
+    @WithTransaction
+    public static Uni<Void> delete(long id) {
+        return User.<User>findById(id)
+            .chain(
+                u -> Uni.combine().all().unis(
+                    Task.delete("user.id", u.id),
+                    Project.delete("user.id", u.id)
+                ).asTuple().chain(t -> u.delete())
+            );
+    }
 }
