@@ -56,7 +56,12 @@ public class User extends PanacheEntity {
 
     @WithTransaction
     public static Uni<User> create(User user) {
-        user.password = BcryptUtil.bcryptHash(user.password);
+        // If request JSON object does not have password property,
+        // user.password will be set to be Null, then bcryptHash
+        // throws NullPointerException 
+        if (user.password != null) {
+            user.password = BcryptUtil.bcryptHash(user.password);
+        }
         return user.persistAndFlush();
     }
 
