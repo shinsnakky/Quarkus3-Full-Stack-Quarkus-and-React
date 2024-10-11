@@ -16,6 +16,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import jakarta.ws.rs.ClientErrorException;
 import jakarta.ws.rs.core.Response;
+import org.hibernate.ObjectNotFoundException;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.ZonedDateTime;
@@ -69,6 +70,9 @@ public class User extends PanacheEntity {
     @WithTransaction
     public static Uni<User> update(User user) {
         return User.<User>findById(user.id)
+            .onItem().ifNull().failWith(
+                () -> new ObjectNotFoundException(user.id, "User")
+            )
             .chain(u -> {
                 user.setPassword(u.password);
                 return User.getSession();
