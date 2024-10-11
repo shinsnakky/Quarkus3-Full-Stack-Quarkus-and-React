@@ -2,7 +2,6 @@ package com.example.fullstack.user;
 
 import com.example.fullstack.project.Project;
 import com.example.fullstack.task.Task;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import io.quarkus.elytron.security.common.BcryptUtil;
 import io.quarkus.hibernate.reactive.panache.PanacheEntity;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
@@ -15,6 +14,8 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import jakarta.ws.rs.ClientErrorException;
+import jakarta.ws.rs.core.Response;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.ZonedDateTime;
@@ -84,5 +85,28 @@ public class User extends PanacheEntity {
                     Project.delete("user.id", u.id)
                 ).asTuple().chain(t -> u.delete())
             );
+    }
+
+    public static boolean matches(User user, String password) {
+        return BcryptUtil.matches(password, user.password);
+    }
+
+    @WithTransaction
+    public static Uni<User> changePassword(
+            String currentPassword,
+            String newPassword,
+            String name
+    ) {
+        return findByName(name)
+                .chain(u -> {
+                    if (!matches(u, currentPassword)) {
+                        throw new ClientErrorException(
+                                "Current password does not match",
+                                Response.Status.CONFLICT
+                        );
+                    }
+                    u.setPassword(BcryptUtil.bcryptHash(newPassword));
+                    return u.persistAndFlush();
+                });
     }
 }

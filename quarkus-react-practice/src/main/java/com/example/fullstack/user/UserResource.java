@@ -2,6 +2,7 @@ package com.example.fullstack.user;
 
 import io.smallrye.mutiny.Uni;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
@@ -10,13 +11,18 @@ import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.core.MediaType;
+import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.hibernate.ObjectNotFoundException;
 import org.jboss.resteasy.reactive.ResponseStatus;
 
 import java.util.List;
 
 @Path("/api/v1/users")
+@RolesAllowed("admin")
 public class UserResource {
+
+    @Inject
+    private JsonWebToken jsonWebToken;
 
     @GET
     public Uni<List<User>> get() {
@@ -57,7 +63,18 @@ public class UserResource {
     @Path("self")
     @RolesAllowed("user")
     public Uni<User> getCurrentUser() {
-        // TODO: replace implementation once security is added to the project
-        return User.find("order by ID").firstResult();
+        return User.findByName(jsonWebToken.getName());
+    }
+
+    @PUT
+    @Path("self/password")
+    @RolesAllowed("user")
+    public Uni<User> changePassword(PasswordChange passwordChange) {
+        return User
+            .changePassword(
+                passwordChange.currentPassword(),
+                passwordChange.newPassword(),
+                jsonWebToken.getName()
+            );
     }
 }
