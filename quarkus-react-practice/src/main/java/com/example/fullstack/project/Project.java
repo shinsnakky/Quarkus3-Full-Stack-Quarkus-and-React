@@ -1,7 +1,10 @@
 package com.example.fullstack.project;
 
+import com.example.fullstack.task.Task;
 import com.example.fullstack.user.User;
 import io.quarkus.hibernate.reactive.panache.PanacheEntity;
+import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
+import io.smallrye.mutiny.Uni;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.ManyToOne;
@@ -11,6 +14,7 @@ import jakarta.persistence.Version;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.ZonedDateTime;
+import java.util.List;
 
 @Entity
 @Table(
@@ -33,4 +37,32 @@ public class Project extends PanacheEntity {
 
     @Version
     public int version;
+
+    public static Uni<List<Project>> listForUser(String name) {
+        return User.findByName(name)
+                .chain(user -> Project.find("user", user).list());
+    }
+
+    @WithTransaction
+    public static Uni<Project> create(Project project, String name) {
+        return User.findByName(name)
+                .chain(user -> {
+                    project.user = user;
+                    return project.persistAndFlush();
+                });
+    }
+
+    @WithTransaction
+    public static Uni<Project> update(Project project) {
+        return Project.<Project>findById(project.id)
+                .chain(p -> Project.getSession())
+                .chain(s -> s.merge(project));
+    }
+
+    @WithTransaction
+    public static Uni<Void> delete(long id) {
+        return Project.<Project>findById(id)
+                .chain(p -> Task.update("project = null where project = ?1", p)
+                        .chain(i -> p.delete()));
+    }
 }
