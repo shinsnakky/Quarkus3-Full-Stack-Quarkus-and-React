@@ -40,7 +40,7 @@ public class TaskResource {
     @Path("/{id}")
     public Uni<Task> update(@PathParam("id") long id, Task task) {
         task.id = id;
-        return Task.update(task);
+        return Task.update(task, jsonWebToken.getName());
     }
 
     @DELETE

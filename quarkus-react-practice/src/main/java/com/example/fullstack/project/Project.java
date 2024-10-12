@@ -57,20 +57,16 @@ public class Project extends PanacheEntity {
     //
     @WithTransaction
     public static Uni<Project> update(Project project, String user) {
-        /*
-        return Project.<Project>findById(project.id)
-            .onItem().ifNull().failWith(
-                () -> new ObjectNotFoundException(project.id, "Project")
-            )
-            .chain(p -> Project.getSession())
-            .chain(s -> s.merge(project));
-         */
         return User.findByName(user)
             .chain(u -> Project.<Project>findById(project.id)
-                .onItem().ifNull().failWith(() -> new ObjectNotFoundException(project.id, "Project"))
+                .onItem().ifNull().failWith(
+                    () -> new ObjectNotFoundException(project.id, "Project")
+                )
                 .onItem().invoke(p -> {
                     if (!u.equals(p.user)) {
-                        throw new UnauthorizedException("You are not allowed to update this project");
+                        throw new UnauthorizedException(
+                            "You are not allowed to update this project"
+                        );
                     }
                 })
             ).chain(p -> Project.getSession())

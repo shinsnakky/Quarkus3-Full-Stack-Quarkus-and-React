@@ -1,24 +1,21 @@
 package com.example.fullstack.task;
 
-import com.example.fullstack.user.User;
+import io.quarkus.test.TestReactiveTransaction;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
+import io.quarkus.test.vertx.UniAsserter;
 import io.restassured.http.ContentType;
 import org.hamcrest.Matcher;
 import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.emptyString;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
 
 @QuarkusTest
 class TaskResourceTest {
@@ -40,7 +37,10 @@ class TaskResourceTest {
                         hasEntry("title", "to-be-listed")
                     ),
                     everyItem(
-                        hasEntry(is("user"), (Matcher)hasEntry("name", "user"))
+                        hasEntry(
+                            is("user"),
+                            (Matcher)hasEntry("name", "user")
+                        )
                     )
                 )
             );
@@ -95,22 +95,21 @@ class TaskResourceTest {
     @Test
     @TestSecurity(user = "user", roles = "user")
     void updateForbidden() {
-        final User admin = User.<User>findById(0L).await().indefinitely();
-        Task adminTask = new Task();
-        adminTask.title = "admins-task";
-        adminTask.user = admin;
-        adminTask = adminTask.<Task>persistAndFlush().await().indefinitely();
+        // Create a task as admin and update as user
+        // Need to prepare a task with id=0, user=admin using sql script
         given()
             .body("{\"title\":\"to-update\"}")
             .contentType(ContentType.JSON)
-            .when().put("/api/v1/tasks/" + adminTask.id)
+            .when().put("/api/v1/tasks/0")
             .then()
-            .statusCode(401); // TODO: TaskService UnauthorizedException should be changed to ForbiddenException
+            .statusCode(401);
+            // TODO: TaskService UnauthorizedException should be changed to ForbiddenException
     }
 
     @Test
     @TestSecurity(user = "user", roles = "user")
-    void delete() {
+    @TestReactiveTransaction
+    void delete(UniAsserter asserter) {
         var toDelete = given()
             .body("{\"title\":\"to-delete\"}")
             .contentType(ContentType.JSON)
@@ -119,12 +118,15 @@ class TaskResourceTest {
             .when().delete("/api/v1/tasks/" + toDelete.id)
             .then()
             .statusCode(204);
-        assertThat(Task.findById(toDelete.id).await().indefinitely(), nullValue());
+
+        //assertThat(Task.findById(toDelete.id).await().indefinitely(), nullValue());
+        asserter.assertEquals(() -> Task.<Task>findById(toDelete.id), null);
     }
 
     @Test
     @TestSecurity(user = "user", roles = "user")
-    void setComplete() {
+    @TestReactiveTransaction
+    void setComplete(UniAsserter asserter) {
         var toSetComplete = given()
             .body("{\"title\":\"to-set-complete\"}")
             .contentType(ContentType.JSON)
@@ -135,10 +137,20 @@ class TaskResourceTest {
             .when().put("/api/v1/tasks/" + toSetComplete.id + "/complete")
             .then()
             .statusCode(200);
+
+        /*
         assertThat(Task.findById(toSetComplete.id).await().indefinitely(),
             allOf(
                 hasProperty("complete", notNullValue()),
                 hasProperty("version", is(toSetComplete.version + 1))
             ));
+        */
+        asserter.assertNotNull(
+            () -> Task.<Task>findById(toSetComplete.id).map(t -> t.complete)
+        );
+        asserter.assertEquals(
+            () -> Task.<Task>findById(toSetComplete.id).map(t -> t.version),
+            toSetComplete.version + 1
+        );
     }
 }
