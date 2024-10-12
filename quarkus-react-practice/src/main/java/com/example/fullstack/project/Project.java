@@ -4,6 +4,7 @@ import com.example.fullstack.task.Task;
 import com.example.fullstack.user.User;
 import io.quarkus.hibernate.reactive.panache.PanacheEntity;
 import io.quarkus.hibernate.reactive.panache.common.WithTransaction;
+import io.quarkus.security.UnauthorizedException;
 import io.smallrye.mutiny.Uni;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -11,6 +12,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Version;
+import org.hibernate.ObjectNotFoundException;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.ZonedDateTime;
@@ -52,17 +54,35 @@ public class Project extends PanacheEntity {
                 });
     }
 
+    //
     @WithTransaction
-    public static Uni<Project> update(Project project) {
+    public static Uni<Project> update(Project project, String user) {
+        /*
         return Project.<Project>findById(project.id)
-                .chain(p -> Project.getSession())
-                .chain(s -> s.merge(project));
+            .onItem().ifNull().failWith(
+                () -> new ObjectNotFoundException(project.id, "Project")
+            )
+            .chain(p -> Project.getSession())
+            .chain(s -> s.merge(project));
+         */
+        return User.findByName(user)
+            .chain(u -> Project.<Project>findById(project.id)
+                .onItem().ifNull().failWith(() -> new ObjectNotFoundException(project.id, "Project"))
+                .onItem().invoke(p -> {
+                    if (!u.equals(p.user)) {
+                        throw new UnauthorizedException("You are not allowed to update this project");
+                    }
+                })
+            ).chain(p -> Project.getSession())
+            .chain(s -> s.merge(project));
     }
 
     @WithTransaction
     public static Uni<Void> delete(long id) {
         return Project.<Project>findById(id)
-                .chain(p -> Task.update("project = null where project = ?1", p)
-                        .chain(i -> p.delete()));
+            .chain(
+                p -> Task.update("project = null where project = ?1", p)
+                    .chain(i -> p.delete())
+            );
     }
 }

@@ -1,5 +1,6 @@
 package com.example.fullstack.project;
 
+import io.quarkus.security.UnauthorizedException;
 import io.smallrye.mutiny.Uni;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -32,9 +33,14 @@ public class ProjectResource {
     @PUT
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{id}")
+    // Projects are updatable only by the user who created it.
     public Uni<Project> update(@PathParam("id") long id, Project project) {
         project.id = id;
-        return Project.update(project);
+        //if (!jsonWebToken.getName().equals(project.user.name)) {
+        //    throw new UnauthorizedException("You are not allowed to update this project");
+        //}
+
+        return Project.update(project, jsonWebToken.getName());
     }
 
     @DELETE

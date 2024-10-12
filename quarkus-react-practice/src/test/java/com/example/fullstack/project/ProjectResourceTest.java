@@ -1,20 +1,20 @@
 package com.example.fullstack.project;
 
 import com.example.fullstack.task.Task;
+import io.quarkus.test.TestReactiveTransaction;
+import io.quarkus.test.vertx.UniAsserter;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.security.TestSecurity;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.Test;
 
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.emptyString;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
 
 @QuarkusTest
 class ProjectResourceTest {
@@ -66,8 +66,10 @@ class ProjectResourceTest {
     @Test
     @TestSecurity(user = "user", roles = "user")
     void update() {
-        var toUpdate = given().body("{\"name\":\"to-update\"}").contentType(ContentType.JSON)
-            .post("/api/v1/projects").as(Project.class);
+        var toUpdate = given().body("{\"name\":\"to-update\"}")
+            .contentType(ContentType.JSON)
+            .post("/api/v1/projects")
+            .as(Project.class);
         toUpdate.name = "updated";
         given()
             .body(toUpdate)
@@ -105,16 +107,35 @@ class ProjectResourceTest {
 
     @Test
     @TestSecurity(user = "user", roles = "user")
-    void delete() {
-        var toDelete = given().body("{\"name\":\"to-delete\"}").contentType(ContentType.JSON)
+    @TestReactiveTransaction
+    void delete(UniAsserter asserter) {
+        var toDelete = given().body("{\"name\":\"to-delete\"}")
+            .contentType(ContentType.JSON)
             .post("/api/v1/projects").as(Project.class);
-        var dependentTask = given()
-            .body("{\"title\":\"dependent-task\",\"project\":{\"id\":" + toDelete.id + "}}").contentType(ContentType.JSON)
-            .post("/api/v1/tasks").as(Task.class);
+
+        var dependentTask = given().body(
+            "{\"title\":\"dependent-task\","
+                + "\"project\":{\"id\":" + toDelete.id + "}}"
+        ).contentType(ContentType.JSON).post("/api/v1/tasks").as(Task.class);
+
         given()
             .when().delete("/api/v1/projects/" + toDelete.id)
             .then()
             .statusCode(204);
-        assertThat(Task.<Task>findById(dependentTask.id).await().indefinitely().project, nullValue());
+
+        // The original code causes "No current Mutiny.Session found" error.
+        // assertThat(
+        //     Task.<Task>findById(dependentTask.id)
+        //         .await().indefinitely().project, nullValue()
+        // );
+
+        // To resolve the issue, TestReactiveTransaction annotation and
+        // UniAsserter can be used.
+        // An explanation is found at https://quarkus.io/guides/hibernate-reactive
+        asserter.assertEquals(
+            () -> Task.<Task>findById(dependentTask.id)
+                .map(task -> task.project),
+            null
+        );
     }
 }
