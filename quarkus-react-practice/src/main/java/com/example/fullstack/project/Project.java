@@ -42,16 +42,16 @@ public class Project extends PanacheEntity {
 
     public static Uni<List<Project>> listForUser(String name) {
         return User.findByName(name)
-                .chain(user -> Project.find("user", user).list());
+            .chain(user -> Project.find("user", user).list());
     }
 
     @WithTransaction
     public static Uni<Project> create(Project project, String name) {
         return User.findByName(name)
-                .chain(user -> {
-                    project.user = user;
-                    return project.persistAndFlush();
-                });
+            .chain(user -> {
+                project.user = user;
+                return project.persistAndFlush();
+            });
     }
 
     //

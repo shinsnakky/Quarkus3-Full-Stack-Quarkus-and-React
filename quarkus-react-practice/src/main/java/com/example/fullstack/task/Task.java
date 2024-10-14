@@ -46,16 +46,16 @@ public class Task extends PanacheEntity {
 
     public static Uni<List<Task>> listForUser(String name) {
         return User.findByName(name)
-                .chain(user -> Task.find("user", user).list());
+            .chain(user -> Task.find("user", user).list());
     }
 
     @WithTransaction
     public static Uni<Task> create(Task task, String name) {
         return User.findByName(name)
-                .chain(user -> {
-                    task.user = user;
-                    return task.persistAndFlush();
-                });
+            .chain(user -> {
+                task.user = user;
+                return task.persistAndFlush();
+            });
     }
 
     @WithTransaction
@@ -85,10 +85,10 @@ public class Task extends PanacheEntity {
     @WithTransaction
     public static Uni<Boolean> setComplete(long id, boolean complete) {
         return Task.<Task>findById(id)
-                .chain(task -> {
-                    task.complete = complete ? ZonedDateTime.now() : null;
-                    return task.persistAndFlush();
-                })
-                .chain(task -> Uni.createFrom().item(complete));
+            .chain(task -> {
+                task.complete = complete ? ZonedDateTime.now() : null;
+                return task.persistAndFlush();
+            })
+            .chain(task -> Uni.createFrom().item(complete));
     }
 }

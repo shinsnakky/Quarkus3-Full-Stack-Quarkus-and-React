@@ -92,25 +92,26 @@ public class User extends PanacheEntity {
     }
 
     public static boolean matches(User user, String password) {
-        return BcryptUtil.matches(password, user.password);
+         return BcryptUtil.matches(password, user.password);
     }
 
     @WithTransaction
     public static Uni<User> changePassword(
-            String currentPassword,
-            String newPassword,
-            String name
+        String currentPassword,
+        String newPassword,
+        String name
     ) {
         return findByName(name)
-                .chain(u -> {
-                    if (!matches(u, currentPassword)) {
-                        throw new ClientErrorException(
-                                "Current password does not match",
-                                Response.Status.CONFLICT
-                        );
-                    }
+            .chain(u -> {
+                if (matches(u, currentPassword)) {
                     u.setPassword(BcryptUtil.bcryptHash(newPassword));
-                    return u.persistAndFlush();
-                });
+                } else {
+                    throw new ClientErrorException(
+                        "Current password does not match",
+                        Response.Status.CONFLICT
+                    );
+                }
+                return u.persistAndFlush();
+            });
     }
 }
