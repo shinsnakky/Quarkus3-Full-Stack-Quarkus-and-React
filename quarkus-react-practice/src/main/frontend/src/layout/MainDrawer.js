@@ -1,8 +1,11 @@
 import { Link, useMatch } from 'react-router-dom';
 import {
-  Box, Drawer, List, ListItemButton, ListItemIcon, ListItemText, Toolbar, Tooltip
+  Box, Divider, Drawer, List, ListItemButton, ListItemIcon, ListItemText,
+  Toolbar, Tooltip
 } from '@mui/material';
 import InboxIcon from '@mui/icons-material/Inbox';
+import PersonIcon from '@mui/icons-material/Person';
+import { HasRole } from '../auth/HasRole';
 
 const Item = ({ Icon, iconSize, title, to, disableTooltip=false }) => {
   const match = Boolean(useMatch(to));
@@ -32,6 +35,11 @@ export const MainDrawer = ({ drawerOpen, toggleDrawer }) => (
       <List>
         <Item disableTooltip={drawerOpen} Icon={InboxIcon}
           title='Todo' to='/'/>
+        <HasRole role='admin'>
+          <Divider/>
+          <Item disableTooltip={drawerOpen} Icon={PersonIcon}
+            title='Users' to='/users'/>
+        </HasRole>
       </List>
     </Box>
   </Drawer>

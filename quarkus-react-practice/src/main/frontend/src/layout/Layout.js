@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Box, Toolbar } from '@mui/material';
@@ -8,6 +9,14 @@ import { MainDrawer } from './MainDrawer';
 export const Layout = ({children}) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();  
+  
+  const jwt = useSelector(state => state.auth.jwt);
+  useEffect(() => {
+    if (!jwt) {
+      navigate('/login');
+    }
+  }, [navigate, jwt]);
+  
   const drawerOpen = useSelector(state => state.layout.drawerOpen);
   const doToggleDrawer = () => dispatch(layoutSlice.actions.toggleDrawer());
   return (
