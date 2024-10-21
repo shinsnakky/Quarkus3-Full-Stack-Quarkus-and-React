@@ -1,10 +1,14 @@
 import { Link, useMatch } from 'react-router-dom';
 import {
-  Box, Divider, Drawer, List, ListItemButton, ListItemIcon, ListItemText,
-  Toolbar, Tooltip
+  Box, Divider, Drawer, IconButton, List, ListItem, ListItemButton, ListItemIcon, ListItemText, Toolbar, Tooltip
 } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import AssignmentIcon from '@mui/icons-material/Assignment';
+import CheckIcon from '@mui/icons-material/Check';
+import CircleIcon from '@mui/icons-material/Circle';
 import InboxIcon from '@mui/icons-material/Inbox';
 import PersonIcon from '@mui/icons-material/Person';
+import SnippetFolderIcon from '@mui/icons-material/SnippetFolder';
 import { HasRole } from '../auth/HasRole';
 
 const Item = ({ Icon, iconSize, title, to, disableTooltip=false }) => {
@@ -20,7 +24,30 @@ const Item = ({ Icon, iconSize, title, to, disableTooltip=false }) => {
   )
 };
 
-export const MainDrawer = ({ drawerOpen, toggleDrawer }) => (
+const Projects = ({drawerOpen, openNewProject, projects}) => (
+  <>
+    <Divider/>
+    <ListItem
+      secondaryAction={drawerOpen &&
+        <IconButton edge='end' onClick={openNewProject}>
+          <AddIcon />
+        </IconButton>
+      }
+    >
+      <ListItemIcon><SnippetFolderIcon/></ListItemIcon>
+      <ListItemText primaryTypographyProps={{fontWeight: 'medium'}}>
+        Projects
+      </ListItemText>
+    </ListItem>
+    {Array.from(projects).map(p => (
+      <Item key={p.id} disableTooltip={drawerOpen} Icon={CircleIcon} iconSize='small' title={p.name} to={`/tasks/project/${p.id}`}/>
+    ))}
+  </>
+);
+
+export const MainDrawer = ({
+  drawerOpen, toggleDrawer, openNewProject, projects = []
+}) => (
   <Drawer open={drawerOpen} onClose={toggleDrawer} variant='permanent'
     sx={{
       width: theme => drawerOpen ? theme.layout.drawerWidth : theme.spacing(7),
@@ -33,8 +60,14 @@ export const MainDrawer = ({ drawerOpen, toggleDrawer }) => (
     <Toolbar/>
     <Box sx={{overflow: drawerOpen ? 'auto' : 'hidden'}}>
       <List>
-        <Item disableTooltip={drawerOpen} Icon={InboxIcon}
-          title='Todo' to='/'/>
+        <Item disableTooltip={drawerOpen} Icon={InboxIcon} title='Todo'
+          to='/tasks/pending'/>
+        <Item disableTooltip={drawerOpen} Icon={CheckIcon} title='Completed'
+          to='/tasks/completed'/>
+        <Item disableTooltip={drawerOpen} Icon={AssignmentIcon}
+          title='All' to='/tasks'/>   
+        <Projects drawerOpen={drawerOpen} openNewProject={openNewProject}
+          projects={projects}/>
         <HasRole role='admin'>
           <Divider/>
           <Item disableTooltip={drawerOpen} Icon={PersonIcon}

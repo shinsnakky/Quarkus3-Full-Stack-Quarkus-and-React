@@ -1,4 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import { fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 export const login = createAsyncThunk(
   'auth/login',
@@ -40,3 +41,21 @@ export const authSlice = createSlice({
     })
   }
 }); 
+
+export const authBaseQuery = ({path}) => {
+  const baseQuery = fetchBaseQuery({
+    baseUrl: `${process.env.REACT_APP_API_URL}/${path}`,
+    prepareHeaders: (headers, {getState}) => {
+      headers.set('authorization', `Bearer ${getState().auth.jwt}`);
+      return headers;
+    }
+  });
+  return async (args, api, extraOptions) => {
+    const result = await baseQuery(args, api, extraOptions);
+    
+    if (result.error && result.error.status === 401) {
+      api.dispatch(authSlice.actions.logout());
+    }
+    return result;
+  };
+};

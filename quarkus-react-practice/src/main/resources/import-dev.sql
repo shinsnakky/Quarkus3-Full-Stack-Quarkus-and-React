@@ -26,4 +26,3 @@ VALUES (0, 'Task', 'Initial data for testing', 1, 0, null, 1, NOW(), 0)
 
 ALTER SEQUENCE users_seq RESTART WITH 2;
 ALTER SEQUENCE projects_seq RESTART WITH 2;
-ALTER SEQUENCE tasks_seq RESTART WITH 1;
