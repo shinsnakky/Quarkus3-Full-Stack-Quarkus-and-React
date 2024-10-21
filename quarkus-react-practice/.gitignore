@@ -42,3 +42,11 @@ nb-configuration.xml
 
 # key pairs for JWT
 src/main/resources/jwt/
+
+# build artifact (BUILD_PATH=frontend npm run build)
+src/main/frontend/frontend/
+src/main/frontend/build/
+
+# integrated frontend build artifact
+src/main/resources/frontend/
+src/main/resources/build/

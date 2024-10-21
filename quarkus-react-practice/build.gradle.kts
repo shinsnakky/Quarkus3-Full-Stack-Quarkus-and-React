@@ -43,3 +43,34 @@ tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
     options.compilerArgs.add("-parameters")
 }
+
+tasks.register<Exec>("npmBuildFrontend") {
+    group = "Custom"
+    description = "Build frontend with npm"
+    
+    workingDir("./src/main/frontend")
+    
+    commandLine("bash", "-c", "npm install")
+    commandLine("bash", "-c", "BUILD_PATH=frontend npm run build")
+}
+
+tasks.register<Delete>("dropFrontend") {
+    group = "Custom"
+    description = "Delete frontend/ from src/main/resources/"
+    
+    delete("src/main/resources/frontend")
+}
+
+tasks.register<Copy>("buildFrontend") {
+    group = "Custom"
+    description = "Build and copy frontend to src/main/resources/"
+    
+    from("src/main/frontend")
+    into("src/main/resources")
+    include("frontend/**")
+
+    dependsOn("npmBuildFrontend")
+    dependsOn("dropFrontend")
+}
+
+
