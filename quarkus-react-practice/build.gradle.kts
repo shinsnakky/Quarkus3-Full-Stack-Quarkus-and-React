@@ -54,23 +54,14 @@ tasks.register<Exec>("npmBuildFrontend") {
     commandLine("bash", "-c", "BUILD_PATH=frontend npm run build")
 }
 
-tasks.register<Delete>("dropFrontend") {
-    group = "Custom"
-    description = "Delete frontend/ from src/main/resources/"
-    
-    delete("src/main/resources/frontend")
-}
-
-tasks.register<Copy>("buildFrontend") {
+tasks.register<Sync>("buildFrontend") {
     group = "Custom"
     description = "Build and copy frontend to src/main/resources/"
     
-    from("src/main/frontend")
-    into("src/main/resources")
-    include("frontend/**")
+    from("src/main/frontend/frontend")
+    into("src/main/resources/frontend")
 
     dependsOn("npmBuildFrontend")
-    dependsOn("dropFrontend")
 }
 
 
